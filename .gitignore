@@ -1,0 +1,7 @@
+# 补丁脚本运行时产物（scripts/patch.js 生成）
+.tmp_asar_stage/
+app.asar.patched
+
+# Node.js
+node_modules/
+package-lock.json
