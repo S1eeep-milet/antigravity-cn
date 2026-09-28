@@ -422,6 +422,36 @@ const MAIN_PATCHES = [
     search: "detail: 'There may be agents or background tasks running.',",
     replace: "detail: '当前可能仍有智能体或后台任务正在运行。',",
   },
+  {
+    label: 'main.js · WSL 分发版未找到（标题）',
+    already: "title: 'WSL 分发版未找到',",
+    search: "title: 'WSL distro not found',",
+    replace: "title: 'WSL 分发版未找到',",
+  },
+  {
+    label: 'main.js · WSL 分发版未找到（正文）',
+    already: 'WSL 分发版 "${WSL_DISTRO}" 已不再安装。',
+    search: 'message: `The WSL distro "${WSL_DISTRO}" is no longer installed.`,',
+    replace: 'message: `WSL 分发版 "${WSL_DISTRO}" 已不再安装。`,',
+  },
+  {
+    label: 'main.js · WSL 分发版未找到（补充说明）',
+    already: "detail: 'Antigravity 已在 Windows 上打开。',",
+    search: "detail: 'Antigravity opened on Windows instead.',",
+    replace: "detail: 'Antigravity 已在 Windows 上打开。',",
+  },
+  {
+    label: 'main.js · WSL 服务器安装失败（正文）',
+    already: '无法将服务器安装到 WSL 分发版 "${WSL_DISTRO}" 中：',
+    search: 'const msg = `Failed to install the server into WSL distro "${WSL_DISTRO}":\\n${err.message}`;',
+    replace: 'const msg = `无法将服务器安装到 WSL 分发版 "${WSL_DISTRO}" 中：\\n${err.message}`;',
+  },
+  {
+    label: 'main.js · WSL 设置失败（错误框标题）',
+    already: "showErrorBox('WSL 设置失败'",
+    search: "electron_1.dialog.showErrorBox('WSL setup failed', msg)",
+    replace: "electron_1.dialog.showErrorBox('WSL 设置失败', msg)",
+  },
 ];
 
 // ---- ipcHandlers.js：文件选择对话框标题 ----
@@ -437,6 +467,18 @@ const IPC_PATCHES = [
     already: "title: '打开多个工作区',",
     search: "title: 'Open workspaces',",
     replace: "title: '打开多个工作区',",
+  },
+  {
+    label: 'ipcHandlers.js · 「无法打开文件夹」标题',
+    already: "showErrorBox('无法打开文件夹'",
+    search: "electron_1.dialog.showErrorBox('Cannot open folder', t.error);",
+    replace: "electron_1.dialog.showErrorBox('无法打开文件夹', t.error);",
+  },
+  {
+    label: 'ipcHandlers.js · 「文件夹位于 Windows 文件系统」提示',
+    already: "message: '文件夹位于 Windows 文件系统上',",
+    search: "message: 'Folder is on the Windows filesystem',",
+    replace: "message: '文件夹位于 Windows 文件系统上',",
   },
 ];
 
@@ -525,7 +567,9 @@ const MENU_LOCALIZE_BLOCK = `    // __AGY_CN_MENU__ 原生应用菜单汉化
       'Downloading Update': '正在下载更新',
       'Restart to Update': '重启并更新',
       'Up to Date': '已是最新版本',
-      'About Antigravity': '关于 Antigravity'
+      'About Antigravity': '关于 Antigravity',
+      'Connect to WSL': '连接到 WSL',
+      'Reopen Locally': '在本机重新打开'
     };
     function __agyLocalizeMenu(m) {
       if (!m || !m.items) return;
@@ -603,6 +647,66 @@ const WIZARD_PATCHES = [
     replace: '>探索全新 Antigravity</button>',
   },
 ];
+
+// ---- menu.js：WSL 菜单项（异步添加，绕过本地化函数，需直接替换源码） ----
+const MENU_WSL_PATCHES = [
+  {
+    label: 'menu.js · 「连接到 WSL」菜单项',
+    already: "label: '连接到 WSL'",
+    search: "return { label: 'Connect to WSL', submenu };",
+    replace: "return { label: '连接到 WSL', submenu };",
+  },
+  {
+    label: 'menu.js · 「在本机重新打开」菜单项',
+    already: "label: '在本机重新打开'",
+    search: "return { label: 'Reopen Locally', click: () => relaunchWithWslDistro('') };",
+    replace: "return { label: '在本机重新打开', click: () => relaunchWithWslDistro('') };",
+  },
+];
+
+// ---- wsl.js：路径转换错误 / 警告 / 启动画面状态文案 ----
+const WSL_PATCHES = [
+  {
+    label: 'wsl.js · 路径属于其他分发版（错误）',
+    already: '此文件夹属于 WSL 分发版',
+    search: 'error: `This folder belongs to the WSL distro "${unc[1]}", but this window is connected to "${distro}".`,',
+    replace: 'error: `此文件夹属于 WSL 分发版 "${unc[1]}"，但当前窗口连接的是 "${distro}"。`,',
+  },
+  {
+    label: 'wsl.js · 无法在 WSL 中打开的位置（错误）',
+    already: '无法在 WSL 中打开此位置',
+    search: 'return { error: `This location cannot be opened in WSL: ${winPath}` };',
+    replace: 'return { error: `无法在 WSL 中打开此位置：${winPath}` };',
+  },
+  {
+    label: 'wsl.js · Windows 文件系统访问警告',
+    already: '此文件夹位于 Windows 文件系统上。',
+    search:
+      "warning: 'This folder is on the Windows filesystem. Accessing it from WSL (via /mnt) can be slow — for best performance keep projects inside the WSL filesystem.',",
+    replace:
+      "warning: '此文件夹位于 Windows 文件系统上。从 WSL（通过 /mnt）访问它可能会较慢 — 为获得最佳性能，请将项目放在 WSL 文件系统内。',",
+  },
+  {
+    label: 'wsl.js · 下载服务器二进制状态',
+    already: '正在下载 Antigravity 二进制文件',
+    search: "onStatus?.('Downloading the Antigravity binary\\u2026');",
+    replace: "onStatus?.('正在下载 Antigravity 二进制文件…');",
+  },
+  {
+    label: 'wsl.js · 安装服务器状态',
+    already: '正在安装到',
+    search: 'onStatus?.(`Installing into ${distro}\\u2026`);',
+    replace: 'onStatus?.(`正在安装到 ${distro}…`);',
+  },
+];
+
+// ---- provisionSplash.js：WSL 启动画面（data: URL 页面，直接替换 HTML） ----
+const PROVISION_PATCH = {
+  label: 'provisionSplash.js · 「正在设置 WSL」文案',
+  already: '正在设置 WSL：',
+  search: '<div>Setting up WSL: ${escapeHtml(distro)}</div>',
+  replace: '<div>正在设置 WSL：${escapeHtml(distro)}</div>',
+};
 
 // ============================== 补丁执行 ==============================
 
@@ -690,6 +794,10 @@ function patchMenu(menuPath) {
     }
     console.log('  [完成] menu.js 菜单汉化注入（一级 + 全量二级菜单）');
   }
+
+  // 3) WSL 菜单项异步添加，绕过本地化函数，需直接替换源码
+  code = applyPatches(code, MENU_WSL_PATCHES);
+
   fs.writeFileSync(menuPath, code, 'utf-8');
 }
 
@@ -839,9 +947,27 @@ function applyPatch() {
     fs.writeFileSync(wizardPath, wizardCode, 'utf-8');
   }
 
+  // Step 13: wsl.js —— WSL 路径转换错误 / 警告 / 启动画面状态
+  const wslPath = path.join(distDir, 'wsl.js');
+  if (fs.existsSync(wslPath)) {
+    console.log('正在汉化 WSL 集成文案 (wsl.js)...');
+    let wslCode = fs.readFileSync(wslPath, 'utf-8');
+    wslCode = applyPatches(wslCode, WSL_PATCHES);
+    fs.writeFileSync(wslPath, wslCode, 'utf-8');
+  }
+
+  // Step 14: provisionSplash.js —— WSL 启动画面（data: URL 页面，直接替换 HTML）
+  const splashPath = path.join(distDir, 'provisionSplash.js');
+  if (fs.existsSync(splashPath)) {
+    console.log('正在汉化 WSL 启动画面 (provisionSplash.js)...');
+    let splashCode = fs.readFileSync(splashPath, 'utf-8');
+    splashCode = replaceOnce(splashCode, PROVISION_PATCH.label, PROVISION_PATCH.already, PROVISION_PATCH.search, PROVISION_PATCH.replace);
+    fs.writeFileSync(splashPath, splashCode, 'utf-8');
+  }
+
   console.log(`补丁统计：本次应用 ${patchStats.applied} 处，跳过（已是中文）${patchStats.skipped} 处。`);
 
-  // Step 13: 重新打包并安装
+  // Step 15: 重新打包并安装
   const patchedAsarTemp = path.join(__dirname, '..', 'app.asar.patched');
   if (fs.existsSync(patchedAsarTemp)) {
     fs.unlinkSync(patchedAsarTemp); // 清理上次失败的残留
