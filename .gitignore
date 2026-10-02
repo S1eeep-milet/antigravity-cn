@@ -2,6 +2,9 @@
 .tmp_asar_stage/
 app.asar.patched
 
+# 版本适配临时解包目录
+.tmp_v2191_src/
+
 # Node.js
 node_modules/
 package-lock.json

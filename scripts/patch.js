@@ -14,7 +14,10 @@
  *      打开工作区（ipcHandlers.js）、更新检查（updater.js）
  *   6. 更新器菜单状态标签（updater.js updateMenuState 枚举 → 中文映射）
  *   7. 安装向导页（ideInstall/wizardHtml.js，data: URL 页面直接替换 HTML）
- *   8. 启动过渡层（loadingOverlay.js）
+ *   8. WSL 集成（wsl.js 路径转换错误/警告/状态、menu.js WSL 菜单项、provisionSplash.js 启动画面）
+ *
+ * 说明：v2.19.1 起 loadingOverlay.js 启动过渡层已移除文字（仅保留 SVG 动画），
+ *       故不再包含加载文案补丁。
  *
  * 用法：
  *   node scripts/patch.js              # 应用汉化补丁
@@ -599,14 +602,6 @@ const TRAY_PATCH = {
   replace: "            countItem.label = count > 0 ? `${count} 个智能体运行中` : '无运行中的智能体';",
 };
 
-// ---- loadingOverlay.js：启动过渡层 ----
-const LOADING_PATCH = {
-  label: 'loadingOverlay.js · 启动加载文案',
-  already: '正在加载 Antigravity',
-  search: 'Loading Antigravity',
-  replace: '正在加载 Antigravity',
-};
-
 // ---- ideInstall/wizardHtml.js：安装向导页（data: URL 页面，直接替换 HTML） ----
 const WIZARD_PATCHES = [
   {
@@ -929,16 +924,7 @@ function applyPatch() {
   updaterCode = applyPatches(updaterCode, UPDATER_PATCHES);
   fs.writeFileSync(updaterPath, updaterCode, 'utf-8');
 
-  // Step 11: loadingOverlay.js —— 启动过渡层
-  const loadingPath = path.join(distDir, 'loadingOverlay.js');
-  if (fs.existsSync(loadingPath)) {
-    console.log('正在汉化启动过渡界面 (loadingOverlay.js)...');
-    let loadingCode = fs.readFileSync(loadingPath, 'utf-8');
-    loadingCode = replaceOnce(loadingCode, LOADING_PATCH.label, LOADING_PATCH.already, LOADING_PATCH.search, LOADING_PATCH.replace);
-    fs.writeFileSync(loadingPath, loadingCode, 'utf-8');
-  }
-
-  // Step 12: ideInstall/wizardHtml.js —— 安装向导页（data: URL 页面需直接替换 HTML）
+  // Step 11: ideInstall/wizardHtml.js —— 安装向导页（data: URL 页面需直接替换 HTML）
   const wizardPath = path.join(distDir, 'ideInstall', 'wizardHtml.js');
   if (fs.existsSync(wizardPath)) {
     console.log('正在汉化安装向导页 (wizardHtml.js)...');
@@ -947,7 +933,7 @@ function applyPatch() {
     fs.writeFileSync(wizardPath, wizardCode, 'utf-8');
   }
 
-  // Step 13: wsl.js —— WSL 路径转换错误 / 警告 / 启动画面状态
+  // Step 12: wsl.js —— WSL 路径转换错误 / 警告 / 启动画面状态
   const wslPath = path.join(distDir, 'wsl.js');
   if (fs.existsSync(wslPath)) {
     console.log('正在汉化 WSL 集成文案 (wsl.js)...');
@@ -956,7 +942,7 @@ function applyPatch() {
     fs.writeFileSync(wslPath, wslCode, 'utf-8');
   }
 
-  // Step 14: provisionSplash.js —— WSL 启动画面（data: URL 页面，直接替换 HTML）
+  // Step 13: provisionSplash.js —— WSL 启动画面（data: URL 页面，直接替换 HTML）
   const splashPath = path.join(distDir, 'provisionSplash.js');
   if (fs.existsSync(splashPath)) {
     console.log('正在汉化 WSL 启动画面 (provisionSplash.js)...');
@@ -967,7 +953,7 @@ function applyPatch() {
 
   console.log(`补丁统计：本次应用 ${patchStats.applied} 处，跳过（已是中文）${patchStats.skipped} 处。`);
 
-  // Step 15: 重新打包并安装
+  // Step 14: 重新打包并安装
   const patchedAsarTemp = path.join(__dirname, '..', 'app.asar.patched');
   if (fs.existsSync(patchedAsarTemp)) {
     fs.unlinkSync(patchedAsarTemp); // 清理上次失败的残留
