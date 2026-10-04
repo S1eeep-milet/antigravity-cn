@@ -4,16 +4,17 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Verified](https://img.shields.io/badge/verified-Antigravity%20v2.19.1-brightgreen)](https://github.com/S1eeep-milet/antigravity-cn)
 
-Google Antigravity 桌面客户端（Electron 应用）的非侵入式中文汉化方案：**1414 条词条全覆盖、专业术语统一、一键安装、一键无损还原**。
+Google Antigravity 桌面客户端（Electron 应用）的非侵入式中文汉化方案：**2999 条词条全覆盖、专业术语统一、一键安装、一键无损还原**，并提供缓存清理、一键启动、多路径支持与词典审计等实用工具。
 
 ## 核心特性
 
-- **1414 条词条全覆盖**：语言包 100% 键对齐，覆盖 Web 界面、设置项、原生菜单、系统托盘、安装向导、WSL 集成界面与各类对话框。
-- **专业术语统一**：严格执行标准术语对照（Agent → 智能体、Artifact → 产物、Turbo Mode → 极速模式、Sandbox → 沙箱、Security Preset → 安全预设等 22 组核心术语）。
+- **2999 条词条全覆盖**：语言包 100% 键对齐，覆盖 Web 界面、设置项、原生菜单、系统托盘、安装向导、WSL 集成界面与各类对话框。
+- **专业术语统一**：严格执行标准术语对照（Agent → 智能体、Artifact → 产物、Turbo Mode → 极速模式、Sandbox → 沙箱、Security Preset → 安全预设等核心术语）。
 - **非侵入式架构**：基于外部语言包 + 运行时注入实现，不修改任何业务逻辑、键名与标识符，不触碰后端二进制。
+- **轻量化重打包**：外部模块（chrome-devtools-mcp）保留为 `unpacked` 形式，`app.asar` 维持在约 5 MB，与官方结构一致，不做全量内联膨胀。
 - **天然幂等**：补丁脚本始终从原始备份解包，采用三态校验替换，可重复运行、失败自动中止，杜绝半成品安装。
 - **代码防篡改保护**：翻译引擎自动跳过代码块、终端输出与 Monaco 编辑器内容，绝不干扰写码与命令执行。
-- **一键安装与还原**：`apply-cn.bat` 一键汉化，`restore.bat` 一键回滚官方英文原版。
+- **实用工具链**：一键汉化、一键还原、缓存清理、一键启动、词典审计、词典扩充，全部为纯 Node 脚本，无需额外依赖。
 
 ## 快速开始
 
@@ -27,18 +28,38 @@ Google Antigravity 桌面客户端（Electron 应用）的非侵入式中文汉�
 
 1. 关闭正在运行的 Antigravity 客户端。
 2. 双击运行 `apply-cn.bat`（或在项目目录执行 `node scripts/patch.js`）。
-3. 脚本自动检测安装路径（通常为 `%LOCALAPPDATA%\Programs\antigravity\`）、备份原始 `app.asar`、注入语言包与翻译引擎、应用 40 处界面补丁并重新打包。
+3. 脚本自动定位安装路径、备份原始 `app.asar`、注入语言包与翻译引擎、应用 40 处界面补丁并重新打包。
 4. 重新启动 Antigravity，即可看到完整中文界面。
 
-### 恢复原版
+### 常用工具
 
-双击运行 `restore.bat`，脚本自动从 `app.asar.bak` 备份恢复官方英文原版。
+| 工具 | 一键入口 | 命令 | 说明 |
+|---|---|---|---|
+| 应用汉化 | `apply-cn.bat` | `node scripts/patch.js` | 备份并注入汉化补丁 |
+| 恢复原版 | `restore.bat` | `node scripts/restore.js` | 从 `app.asar.bak` 还原官方英文 |
+| 缓存清理 | `clean-cache.bat` | `node scripts/clean-cache.js` | 清理 Electron 缓存（保留登录态与设置） |
+| 一键启动 | `launch.bat` | `node scripts/launch.js` | 自动定位并启动客户端 |
+| 词典审计 | `audit-dict.bat` | `node scripts/audit-dict.js` | 检查键对齐、空值、重复、占位符等 |
+| 词典扩充 | `import-dict.bat` | `node scripts/import-dict.js <路径>` | 合并外部词典，自动重建词库与引擎 |
+
+常用参数：`--path <目录>` 指定安装路径、`--list` 列出探测到的安装目录、`--dry-run` 预览（清理/扩充）、`--force` 强制清理缓存、`--launch` 打完补丁后自动启动。
+
+### 多路径与自定义路径
+
+脚本按以下优先级定位 Antigravity 安装目录：
+
+1. 命令行 `--path "D:\你的\Antigravity"`
+2. 环境变量 `ANTIGRAVITY_DIR`
+3. 项目根目录 `antigravity-path.txt`（首行写路径，支持 `#` 注释）
+4. 自动探测常见位置（`%LOCALAPPDATA%\Programs\antigravity`、`Program Files` 等）
+
+用 `node scripts/patch.js --list` 可查看当前探测到的全部安装目录。
 
 ## 工作原理
 
 1. **解包**：`patch.js` 自动定位 Antigravity 安装目录，将官方 `app.asar` 备份为 `app.asar.bak`；随后在暂存区中通过目录联接（junction）关联 `app.asar.unpacked` 外部文件目录，确保 chrome-devtools-mcp 等外部模块在解包、重打包过程中完整保留。
-2. **注入**：将 1414 条中英词典与自包含翻译引擎写入解包树；对 `preload.js`、`utils.js`、`menu.js`、`tray.js`、`main.js`、`ipcHandlers.js`、`updater.js`、`wizardHtml.js`、`wsl.js`、`provisionSplash.js` 执行 40 处精准补丁（三态校验：已是中文则跳过、命中英文则替换、均不命中则报错中止）。
-3. **重打包**：将补丁后的文件树重新打包为 `app.asar` 并安装到原路径。
+2. **注入**：将 2999 条中英词典与自包含翻译引擎写入解包树；对 `preload.js`、`utils.js`、`menu.js`、`tray.js`、`main.js`、`ipcHandlers.js`、`updater.js`、`wizardHtml.js`、`wsl.js`、`provisionSplash.js` 执行 40 处精准补丁（三态校验：已是中文则跳过、命中英文则替换、均不命中则报错中止）。
+3. **重打包（轻量化）**：将补丁后的文件树重新打包，`node_modules/chrome-devtools-mcp` 以 `--unpack-dir` 保留为外部 `unpacked` 文件，`app.asar` 维持约 5 MB 并安装到原路径。
 4. **运行时翻译**：翻译引擎通过 MutationObserver 与 DOM 原型钩子实时监听界面变化，动态替换英文文本，同时严格保护代码内容不被误翻译。
 
 ## 目录结构
@@ -46,15 +67,20 @@ Google Antigravity 桌面客户端（Electron 应用）的非侵入式中文汉�
 ```
 Antigravity-cn/
 ├── locales/
-│   ├── en.json                    # 英文官方源文本基准（1414 条键值对）
+│   ├── en.json                    # 英文官方源文本基准（2999 条键值对）
 │   └── zh-CN.json                 # 中文语言包（术语统一，100% 键对齐）
 ├── scripts/
-│   ├── i18n-bundle.js             # 自包含 DOM 翻译引擎（1414 词条内嵌，由补丁注入）
-│   ├── i18n-loader.js             # 非侵入式 DOM 注入引擎
-│   ├── patch.js                   # 自动备份、解包、补丁与重打包安装脚本
-│   └── restore.js                 # 一键恢复官方原版脚本
-├── apply-cn.bat                   # Windows 一键汉化
-├── restore.bat                    # Windows 一键还原
+│   ├── lib/app-path.js            # 安装路径解析（多路径探测 + 自定义路径）
+│   ├── i18n-bundle.js             # 自包含 DOM 翻译引擎（2999 词条内嵌，由补丁注入）
+│   ├── patch.js                   # 备份、解包、补丁与轻量化重打包安装
+│   ├── restore.js                 # 一键恢复官方原版
+│   ├── clean-cache.js             # Electron 缓存清理
+│   ├── launch.js                  # 一键启动客户端
+│   ├── audit-dict.js              # 词典审计工具
+│   └── import-dict.js             # 词典扩充 / 合并工具
+├── apply-cn.bat / restore.bat     # Windows 一键汉化 / 还原
+├── clean-cache.bat / launch.bat   # Windows 一键清缓存 / 启动
+├── audit-dict.bat / import-dict.bat # Windows 一键审计 / 扩充
 ├── 汉化使用说明.md                 # 详细使用与维护说明
 └── README.md
 ```
@@ -77,20 +103,23 @@ Antigravity-cn/
 Antigravity 发布新版本后：
 
 1. 直接重新运行 `apply-cn.bat`，外部语言包架构使绝大部分界面文案立即自动生效。
-2. 若新版出现未翻译的新词条，在 [locales/en.json](locales/en.json) 与 [locales/zh-CN.json](locales/zh-CN.json) 末尾按键值对补充新增英文词条和中文译文（保持键名 100% 对齐，废弃旧键无需删除）。
+2. 若新版出现未翻译的新词条，运行 `node scripts/audit-dict.js` 定位缺口，再在 [locales/en.json](locales/en.json) 与 [locales/zh-CN.json](locales/zh-CN.json) 末尾按键值对补充（保持键名 100% 对齐），或运行 `node scripts/import-dict.js <外部词典目录>` 批量合并。
 3. 再次执行 `apply-cn.bat` 完成增量更新。
 
 ## 安全与兼容性保障
 
 - **不破坏业务逻辑**：不修改 Go 语言服务二进制（`language_server.exe`），不触碰网络请求、身份认证与业务接口。
 - **代码防篡改**：翻译范围严格限定为 UI 展示文本，自动跳过 `<pre>`、`<code>`、Monaco 编辑器与终端命令行输出。
-- **安全回滚**：首次安装自动创建 `app.asar.bak` 原始备份，随时一键还原。
+- **安全回滚**：首次安装自动创建 `app.asar.bak` 原始备份，随时一键还原（字节级一致）。
+- **缓存清理安全**：仅删除 Chromium 缓存类目录，`Local Storage`、`IndexedDB`、`Cookies`、`Preferences` 等登录态与个人设置一律保留。
 - **完整性校验**：解包后自动校验外部模块（chrome-devtools-mcp）完整性，异常时中止安装而非写入损坏文件。
 
 ## 已验证
 
-- 词条：`en.json` / `zh-CN.json` 各 1414 条，JSON 语法校验通过，100% 键对齐
+- 词条：`en.json` / `zh-CN.json` 各 2999 条，JSON 语法校验通过，100% 键对齐
 - 补丁：v2.19.1 下 40/40 处全部命中（含 WSL 集成界面），注入锚点校验通过
+- 轻量化：安装后 `app.asar` 约 5.0 MB（原全量内联方案为 21.7 MB），外部 293 个文件完整保留
+- 工具链：清缓存、一键启动、多路径探测、词典审计、词典扩充全部实测通过
 - 平台：Windows 11 x64
 
 ## 免责声明

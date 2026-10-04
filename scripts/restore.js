@@ -1,20 +1,18 @@
 /**
- * Antigravity Restore Script
- * 
- * Restores the original official app.asar from app.asar.bak.
+ * Antigravity 官方原版还原工具
+ *
+ * 从 app.asar.bak 备份恢复官方英文原版（备份由 patch.js 首次运行时自动创建）。
+ *
+ * 用法：
+ *   node scripts/restore.js                 # 自动探测安装路径并还原
+ *   node scripts/restore.js --path <目录>    # 指定自定义安装路径
+ *   node scripts/restore.js --list           # 列出探测到的安装目录
  */
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-
-function findAntigravityDir() {
-  const localAppData = process.env.LOCALAPPDATA;
-  if (!localAppData) {
-    throw new Error('LOCALAPPDATA environment variable not found.');
-  }
-  return path.join(localAppData, 'Programs', 'antigravity');
-}
+const { resolveAppDir, findAllInstalls, parsePathArg, hasFlag } = require('./lib/app-path');
 
 function closeRunningAntigravity() {
   try {
@@ -24,16 +22,16 @@ function closeRunningAntigravity() {
       execSync('taskkill /F /IM Antigravity.exe', { stdio: 'ignore' });
       try {
         execSync('taskkill /F /IM language_server.exe', { stdio: 'ignore' });
-      } catch (e) {}
+      } catch (_) { /* 语言服务器可能未运行 */ }
       const start = Date.now();
-      while (Date.now() - start < 2000) {}
+      while (Date.now() - start < 2000) { /* 等待句柄释放 */ }
       console.log('Antigravity 进程已退出。');
     }
-  } catch (e) {}
+  } catch (_) { /* 进程可能已退出 */ }
 }
 
 function restoreOriginal() {
-  const appDir = findAntigravityDir();
+  const appDir = resolveAppDir(parsePathArg());
   const resourcesDir = path.join(appDir, 'resources');
   const asarPath = path.join(resourcesDir, 'app.asar');
   const backupPath = path.join(resourcesDir, 'app.asar.bak');
@@ -43,6 +41,7 @@ function restoreOriginal() {
 
   if (!fs.existsSync(backupPath)) {
     console.error('未找到备份文件 app.asar.bak，无法还原！');
+    console.error('备份仅在首次执行汉化补丁时自动创建。');
     process.exit(1);
   }
 
@@ -57,8 +56,18 @@ function restoreOriginal() {
 }
 
 try {
-  restoreOriginal();
+  if (hasFlag('--list')) {
+    const all = findAllInstalls();
+    if (all.length === 0) {
+      console.log('未探测到任何 Antigravity 安装目录。');
+    } else {
+      console.log('探测到的 Antigravity 安装目录:');
+      all.forEach((d, i) => console.log(`  ${i + 1}. ${d}`));
+    }
+  } else {
+    restoreOriginal();
+  }
 } catch (err) {
-  console.error('还原失败:', err);
+  console.error('还原失败:', err.message);
   process.exit(1);
 }

@@ -1,6 +1,11 @@
 # 补丁脚本运行时产物（scripts/patch.js 生成）
 .tmp_asar_stage/
+.tmp_extracted_asar/
 app.asar.patched
+app.asar.patched.unpacked/
+
+# 本地自定义安装路径配置（因机而异，不入库）
+antigravity-path.txt
 
 # 版本适配临时解包目录
 .tmp_v2191_src/

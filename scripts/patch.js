@@ -20,26 +20,25 @@
  *       故不再包含加载文案补丁。
  *
  * 用法：
- *   node scripts/patch.js              # 应用汉化补丁
- *   node scripts/patch.js --emit-bundle # 仅重新生成 scripts/i18n-bundle.js
+ *   node scripts/patch.js                 # 应用汉化补丁（自动探测安装路径）
+ *   node scripts/patch.js --path <目录>    # 指定自定义安装路径
+ *   node scripts/patch.js --list           # 列出探测到的安装目录
+ *   node scripts/patch.js --launch         # 打完补丁后自动启动客户端
+ *   node scripts/patch.js --emit-bundle    # 仅重新生成 scripts/i18n-bundle.js
+ *
+ * 轻量化：重打包时保留 node_modules/chrome-devtools-mcp 为 unpacked 外部文件，
+ *         使 app.asar 维持在官方量级（约 4.6 MB），而非全量内联膨胀到 20+ MB。
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
+const { resolveAppDir, findAllInstalls, parsePathArg, hasFlag } = require('./lib/app-path');
 
 // ============================== 基础工具 ==============================
 
 function findAntigravityDir() {
-  const localAppData = process.env.LOCALAPPDATA;
-  if (!localAppData) {
-    throw new Error('未找到 LOCALAPPDATA 环境变量。');
-  }
-  const defaultPath = path.join(localAppData, 'Programs', 'antigravity');
-  if (fs.existsSync(path.join(defaultPath, 'resources', 'app.asar'))) {
-    return defaultPath;
-  }
-  throw new Error(`未在预期位置找到 Antigravity：${defaultPath}`);
+  return resolveAppDir(parsePathArg());
 }
 
 function isFileLocked(filePath) {
@@ -958,13 +957,22 @@ function applyPatch() {
   if (fs.existsSync(patchedAsarTemp)) {
     fs.unlinkSync(patchedAsarTemp); // 清理上次失败的残留
   }
-  console.log('正在重新打包 app.asar（外部文件全量内联，与官方运行结构等效）...');
-  execSync(`npx --yes @electron/asar pack "${tempExtractDir}" "${patchedAsarTemp}"`, {
+  console.log('正在重新打包 app.asar（保留外部模块 unpacked，维持轻量）...');
+  execSync(`npx --yes @electron/asar pack "${tempExtractDir}" "${patchedAsarTemp}" --unpack-dir "node_modules/chrome-devtools-mcp"`, {
     stdio: 'inherit'
   });
 
   console.log('正在安装中文化补丁...');
   fs.copyFileSync(patchedAsarTemp, asarPath);
+
+  // 外部模块（chrome-devtools-mcp）以 unpacked 形式随包分发：刷新官方 unpacked 目录
+  const patchedUnpacked = patchedAsarTemp + '.unpacked';
+  if (fs.existsSync(patchedUnpacked)) {
+    fs.cpSync(patchedUnpacked, realUnpackedDir, { recursive: true, force: true });
+    fs.rmSync(patchedUnpacked, { recursive: true, force: true });
+    console.log('  外部模块已保留为 unpacked 形式。');
+  }
+
   fs.unlinkSync(patchedAsarTemp);
 
   // 清理临时解包目录与暂存区（junction 仅移除链接本身，不影响真实目录）
@@ -992,10 +1000,27 @@ module.exports = { generateBundleScript, applyPatch, emitBundle };
 
 if (require.main === module) {
   try {
-    if (process.argv[2] === '--emit-bundle') {
+    if (hasFlag('--emit-bundle')) {
       emitBundle();
+    } else if (hasFlag('--list')) {
+      const all = findAllInstalls();
+      if (all.length === 0) {
+        console.log('未探测到任何 Antigravity 安装目录。');
+      } else {
+        console.log('探测到的 Antigravity 安装目录:');
+        all.forEach((d, i) => console.log(`  ${i + 1}. ${d}`));
+      }
     } else {
       applyPatch();
+      if (hasFlag('--launch')) {
+        const appDir = resolveAppDir(parsePathArg());
+        const exe = path.join(appDir, 'Antigravity.exe');
+        if (fs.existsSync(exe)) {
+          const child = spawn(exe, [], { detached: true, stdio: 'ignore' });
+          child.unref();
+          console.log('已启动 Antigravity 客户端。');
+        }
+      }
     }
   } catch (error) {
     console.error('汉化补丁执行失败:', error);

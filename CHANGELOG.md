@@ -1,5 +1,81 @@
 # 更新日志
 
+## 实用增强版 · 工具链 + 词典扩充 + 轻量化（2026-10-04）
+
+### 变更内容
+
+在保持既有「非侵入式注入 + 幂等补丁」脚本架构不变的前提下，新增一整套实用工具链，扩充词典并实现轻量化重打包。
+
+#### 1. 词典扩充（1414 → 2999 条，+1585）
+
+新增 `scripts/import-dict.js`，可从外部词典（如 AntigravityCN）合并词条并自动重建双语词库与翻译引擎：
+
+- 仅接受有效条目，不覆盖已存在键（含大小写差异去重）
+- 写入后按键排序，保证 `en.json` / `zh-CN.json` 100% 键对齐
+- 自动重新生成自包含 `scripts/i18n-bundle.js`
+- 支持 `--dry-run` 预览合并结果
+
+#### 2. 新增词典审计工具（`scripts/audit-dict.js`）
+
+一键体检词典质量，覆盖 7 类检查：
+
+| 检查项 | 说明 |
+|---|---|
+| 键对齐 | `en` / `zh` 双侧键是否一一对应 |
+| 大小写重复键 | 检测仅大小写差异的冗余键 |
+| 空值 | 检测空字符串译文 |
+| 非法键 | 检测键中含中文等异常 |
+| 未翻译 | 中文与英文完全相同 / 中文值不含汉字 |
+| 占位符一致性 | 校验 `${x}`、`{0}`、`%s`、`$1` 等占位符对齐 |
+| 基准完整性 | `en.json` 值是否恒等于键（纯英文基准） |
+
+#### 3. 新增缓存清理工具（`scripts/clean-cache.js`）
+
+- 仅清理 Chromium 缓存类目录（`Cache`、`GPUCache`、`Code Cache`、`ShaderCache`、`Crashpad` 等），**保留登录态、Cookies、Local Storage 与个人设置**
+- 客户端运行中默认拒绝清理，支持 `--force` 强制、`--dry-run` 预览
+- 输出可释放空间明细
+
+#### 4. 新增一键启动工具（`scripts/launch.js`）
+
+- 自动定位安装目录并启动客户端，已运行则跳过
+- 支持 `--path` 指定路径、`--list` 列出探测结果
+
+#### 5. 多路径 / 自定义路径支持（`scripts/lib/app-path.js`）
+
+新增统一路径解析模块，供 `patch.js` / `restore.js` / `launch.js` 复用，四级优先级定位安装目录：
+
+1. 命令行 `--path`
+2. 环境变量 `ANTIGRAVITY_DIR`
+3. 项目根目录 `antigravity-path.txt`
+4. 自动扫描常见安装位置
+
+Windows 下按小写归一化去重，避免大小写差异导致的重复探测。
+
+#### 6. 轻量化重打包
+
+- 重打包时通过 `--unpack-dir "node_modules/chrome-devtools-mcp"` 保留外部模块为 `unpacked` 形式
+- `app.asar` 由全量内联的约 21.7 MB 降至 **约 5 MB**，与官方结构一致
+- 同步刷新 `app.asar.unpacked` 目录，保证 MCP 功能不受影响
+- 保留 junction 关联机制，从 `app.asar.bak` 解包时自动关联真实外部文件目录，防止 ENOENT 与文件缺失
+
+#### 7. 其他
+
+- `patch.js` 新增 `--list` / `--launch` 参数
+- 新增 Windows 一键入口：`clean-cache.bat`、`launch.bat`、`audit-dict.bat`、`import-dict.bat`
+- 移除冗余死代码 `scripts/i18n-loader.js`
+- `.gitignore` 补充临时产物与本地路径配置
+
+### 验证结果
+
+- 补丁应用：40/40 处全部命中，0 跳过（幂等重跑结果一致）
+- 词典一致性：`en.json` / `zh-CN.json` 各 2999 条，键 100% 对齐，JSON 语法校验通过
+- 审计结果：结构检查通过（无空值、无非法键、占位符一致、基准完整）
+- 轻量化：安装后 `app.asar` 约 5 MB，`unpacked` 外部文件约 16 MB 完整保留
+- 还原验证：`restore.js` 还原后 `app.asar` 与官方备份字节级一致（4.42 MB）
+- 缓存清理：`--dry-run` 预览正常，用户数据未被改动
+
+---
+
 ## v2.19.1 适配 · Web 界面词条全量补全（2026-10-02）
 
 ### 变更内容
