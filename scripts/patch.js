@@ -20,26 +20,24 @@
  *       故不再包含加载文案补丁。
  *
  * 用法：
- *   node scripts/patch.js              # 应用汉化补丁
- *   node scripts/patch.js --emit-bundle # 仅重新生成 scripts/i18n-bundle.js
+ *   node scripts/patch.js                          # 应用汉化补丁（多路径自动检测）
+ *   node scripts/patch.js --path <安装目录>         # 手动指定安装目录
+ *   node scripts/patch.js --asar <app.asar 文件>    # 直接指定 app.asar
+ *   node scripts/patch.js --emit-bundle            # 仅重新生成 scripts/i18n-bundle.js
+ *   node scripts/patch.js --clean-cache [--force]  # 清理客户端缓存（不动配置与登录）
+ *   node scripts/patch.js --launch                 # 汉化完成后直接启动客户端
+ *   node scripts/patch.js --help                   # 显示全部参数
  */
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const common = require('./lib/common');
 
 // ============================== 基础工具 ==============================
 
-function findAntigravityDir() {
-  const localAppData = process.env.LOCALAPPDATA;
-  if (!localAppData) {
-    throw new Error('未找到 LOCALAPPDATA 环境变量。');
-  }
-  const defaultPath = path.join(localAppData, 'Programs', 'antigravity');
-  if (fs.existsSync(path.join(defaultPath, 'resources', 'app.asar'))) {
-    return defaultPath;
-  }
-  throw new Error(`未在预期位置找到 Antigravity：${defaultPath}`);
+function findAntigravityDir(options = {}) {
+  return common.findInstallDir(options);
 }
 
 function isFileLocked(filePath) {
@@ -798,8 +796,8 @@ function patchMenu(menuPath) {
 
 // ============================== 主流程 ==============================
 
-function applyPatch() {
-  const appDir = findAntigravityDir();
+function applyPatch(options = {}) {
+  const appDir = findAntigravityDir(options);
   const resourcesDir = path.join(appDir, 'resources');
   const asarPath = path.join(resourcesDir, 'app.asar');
   const backupPath = path.join(resourcesDir, 'app.asar.bak');
@@ -807,6 +805,9 @@ function applyPatch() {
   console.log('=== Antigravity 界面中文化补丁 v2 ===');
   console.log(`目标路径: ${appDir}`);
 
+  if (common.isAntigravityRunning()) {
+    console.log('检测到 Antigravity 客户端正在运行。');
+  }
   ensureAsarWritable(asarPath);
 
   // Step 1: 首次运行时创建原始备份
@@ -988,14 +989,48 @@ function emitBundle() {
 
 // ============================== 入口 ==============================
 
+const HELP_TEXT = [
+  'Antigravity 界面中文化补丁',
+  '',
+  '用法：',
+  '  node scripts/patch.js                          应用汉化（多路径自动检测）',
+  '  node scripts/patch.js --path <安装目录>         指定安装目录',
+  '  node scripts/patch.js --asar <app.asar 文件>    直接指定 app.asar',
+  '  node scripts/patch.js --launch                 汉化成功后直接启动客户端',
+  '  node scripts/patch.js --clean-cache [--force]  只清理缓存（--force 会先关闭客户端）',
+  '  node scripts/patch.js --emit-bundle            仅重新生成 i18n-bundle.js',
+  '  node scripts/patch.js --help                   显示本帮助',
+  '',
+  '也可设置环境变量 ANTIGRAVITY_PATH 指定安装目录。',
+].join('\n');
+
+function parseArgs(argv) {
+  const opts = { launch: false };
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--path' && argv[i + 1]) opts.path = argv[++i];
+    else if (argv[i] === '--asar' && argv[i + 1]) opts.path = argv[++i];
+    else if (argv[i] === '--launch') opts.launch = true;
+  }
+  return opts;
+}
+
 module.exports = { generateBundleScript, applyPatch, emitBundle };
 
 if (require.main === module) {
+  const argv = process.argv.slice(2);
   try {
-    if (process.argv[2] === '--emit-bundle') {
+    if (argv.includes('--help') || argv.includes('-h')) {
+      console.log(HELP_TEXT);
+    } else if (argv.includes('--emit-bundle')) {
       emitBundle();
+    } else if (argv.includes('--clean-cache')) {
+      require('./clean-cache').cleanCache({ force: argv.includes('--force') });
     } else {
-      applyPatch();
+      const opts = parseArgs(argv);
+      applyPatch(opts);
+      if (opts.launch) {
+        require('./launch').launchAntigravity(opts);
+      }
     }
   } catch (error) {
     console.error('汉化补丁执行失败:', error);

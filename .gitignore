@@ -1,5 +1,6 @@
 # 补丁脚本运行时产物（scripts/patch.js 生成）
 .tmp_asar_stage/
+.tmp_extracted_asar/
 app.asar.patched
 
 # 版本适配临时解包目录
