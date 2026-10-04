@@ -1,18 +1,39 @@
-'use strict';
 /**
  * Antigravity Restore Script
- *
+ * 
  * Restores the original official app.asar from app.asar.bak.
- * Usage:
- *   node scripts/restore.js [--path <install dir>|--asar <app.asar file>]
  */
 
 const fs = require('fs');
 const path = require('path');
-const common = require('./lib/common');
+const { execSync } = require('child_process');
 
-function restoreOriginal(options = {}) {
-  const appDir = common.findInstallDir(options);
+function findAntigravityDir() {
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) {
+    throw new Error('LOCALAPPDATA environment variable not found.');
+  }
+  return path.join(localAppData, 'Programs', 'antigravity');
+}
+
+function closeRunningAntigravity() {
+  try {
+    const list = execSync('tasklist /FI "IMAGENAME eq Antigravity.exe" /NH', { encoding: 'utf-8' });
+    if (list.includes('Antigravity.exe')) {
+      console.log('正在关闭正在运行的 Antigravity 客户端...');
+      execSync('taskkill /F /IM Antigravity.exe', { stdio: 'ignore' });
+      try {
+        execSync('taskkill /F /IM language_server.exe', { stdio: 'ignore' });
+      } catch (e) {}
+      const start = Date.now();
+      while (Date.now() - start < 2000) {}
+      console.log('Antigravity 进程已退出。');
+    }
+  } catch (e) {}
+}
+
+function restoreOriginal() {
+  const appDir = findAntigravityDir();
   const resourcesDir = path.join(appDir, 'resources');
   const asarPath = path.join(resourcesDir, 'app.asar');
   const backupPath = path.join(resourcesDir, 'app.asar.bak');
@@ -25,11 +46,7 @@ function restoreOriginal(options = {}) {
     process.exit(1);
   }
 
-  if (common.isAntigravityRunning()) {
-    console.log('正在关闭正在运行的 Antigravity 客户端...');
-    common.killAntigravity();
-    console.log('Antigravity 进程已退出。');
-  }
+  closeRunningAntigravity();
 
   console.log('正在从备份还原 app.asar...');
   fs.copyFileSync(backupPath, asarPath);
@@ -39,13 +56,9 @@ function restoreOriginal(options = {}) {
   console.log('============================================');
 }
 
-module.exports = { restoreOriginal };
-
-if (require.main === module) {
-  try {
-    restoreOriginal(common.parseCommonArgs(process.argv.slice(2)));
-  } catch (err) {
-    console.error('还原失败:', err);
-    process.exit(1);
-  }
+try {
+  restoreOriginal();
+} catch (err) {
+  console.error('还原失败:', err);
+  process.exit(1);
 }

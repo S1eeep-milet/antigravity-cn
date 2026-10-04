@@ -1,32 +1,5 @@
 # 更新日志
 
-## 实用增强 · 词典扩充至 3340 条 + 清缓存/一键启动/多路径/审计工具（2026-10-04）
-
-在保持既有非侵入式脚本架构与 40 处补丁逻辑不变的前提下，吸收同类工具的实用功能，并大幅扩充词典。
-
-### 1. 词典扩充（1414 → 3340 条，+1926）
-
-- 新增词条筛选自社区同类项目 AntigravityCN 的公开词典（其 README 标注 MIT），与现有词典去重后合并；重合的 579 条保留本项目原译文，术语口径不被覆盖。
-- 筛选规则：剔除超长条目（>300 字符）、无中文译文条目、代码/链接类条目，以及英文键中混有中文的中间态条目（共 60 条，该类条目属于对方多段翻译管线的中间产物，不属于官方英文源文本，不应进入 en.json 基准）。
-- 合并后 `en.json` 与 `zh-CN.json` 各 3340 条，100% 键对齐，并已按字母序重排；翻译引擎 `i18n-bundle.js` 已同步重新生成。
-
-### 2. 新增功能
-
-- **多路径检测与自定义路径**（`scripts/lib/common.js`）：安装目录探测扩展到 `%LOCALAPPDATA%\Programs\antigravity`、`%ProgramFiles%\Antigravity` 等多个常见位置；`patch.js` / `restore.js` / `launch.js` 均支持 `--path <安装目录>`、`--asar <app.asar>`，以及环境变量 `ANTIGRAVITY_PATH`。补丁运行前会明确提示检测到的客户端进程状态。
-- **缓存清理**（`scripts/clean-cache.js` + `clean-cache.bat`）：只删除用户数据目录下的 Cache、Code Cache、GPUCache、DawnGraphiteCache、DawnWebGPUCache、blob_storage 临时目录，不动配置与登录；`patch.js --clean-cache [--force]` 亦可调用。
-- **一键启动**（`scripts/launch.js` + `launch.bat`）：直接启动客户端；`patch.js --launch` 支持汉化完成后自动启动。
-- **词典审计工具**（`scripts/audit-locales.js`）：检查键对齐、重复键（从原始文本检测）、空译文、占位符一致性与字母序，`--sort` 一键重排。
-- `patch.js --help` 输出全部参数说明；`.gitignore` 补上 `.tmp_extracted_asar/` 运行时目录。
-
-### 验证结果
-
-- 全部脚本通过 `node --check` 语法校验；`patch.js --help` 输出正确。
-- 词典审计：en/zh 各 3340 条，键 100% 对齐，无重复键、无占位符不一致错误。
-- 缓存清理与路径探测已在模拟目录环境下实测：缓存目录被正确清除、配置目录未受影响；`--path` 指定目录与直接指定 `app.asar` 均能正确解析，路径错误时报错信息包含全部已探测位置。
-- 原有 40 处补丁逻辑与锚点未做任何修改，v2.19.1 的补丁命中验证结论不变；扩充词条仅为运行时词典，不影响补丁。
-
----
-
 ## v2.19.1 适配 · Web 界面词条全量补全（2026-10-02）
 
 ### 变更内容
