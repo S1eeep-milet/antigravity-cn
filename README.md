@@ -2,7 +2,7 @@
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://github.com/S1eeep-milet/antigravity-cn)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Verified](https://img.shields.io/badge/verified-Antigravity%20v2.19.1-brightgreen)](https://github.com/S1eeep-milet/antigravity-cn)
+[![Verified](https://img.shields.io/badge/verified-Antigravity%20v2.28.2-brightgreen)](https://github.com/S1eeep-milet/antigravity-cn)
 
 Google Antigravity 桌面客户端（Electron 应用）的非侵入式中文汉化方案：**2999 条词条全覆盖、专业术语统一、一键安装、一键无损还原**，并提供缓存清理、一键启动、多路径支持与词典审计等实用工具。
 
@@ -22,7 +22,7 @@ Google Antigravity 桌面客户端（Electron 应用）的非侵入式中文汉�
 
 - Windows 10 / 11（x64）
 - Node.js 18+（含 `npx`）
-- Antigravity 桌面客户端（已在 v2.19.1 深度适配验证，兼容后续 2.x 版本）
+- Antigravity 桌面客户端（已在 v2.28.2 深度适配验证，兼容后续 2.x 版本）
 
 ### 应用汉化
 
@@ -117,7 +117,7 @@ Antigravity 发布新版本后：
 ## 已验证
 
 - 词条：`en.json` / `zh-CN.json` 各 2999 条，JSON 语法校验通过，100% 键对齐
-- 补丁：v2.19.1 下 40/40 处全部命中（含 WSL 集成界面），注入锚点校验通过
+- 补丁：v2.28.2 下 40/40 处全部命中（含 WSL 集成界面），注入锚点校验通过
 - 轻量化：安装后 `app.asar` 约 5.0 MB（原全量内联方案为 21.7 MB），外部 293 个文件完整保留
 - 工具链：清缓存、一键启动、多路径探测、词典审计、词典扩充全部实测通过
 - 平台：Windows 11 x64

@@ -8,7 +8,7 @@ app.asar.patched.unpacked/
 antigravity-path.txt
 
 # 版本适配临时解包目录
-.tmp_v2191_src/
+.tmp_v*_src/
 
 # Node.js
 node_modules/
